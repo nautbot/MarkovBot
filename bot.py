@@ -2,11 +2,12 @@ import datetime
 import asyncio
 import traceback
 import json
+import re
 
 import discord
 from discord.ext import commands
 import requests
-import markovify
+from POSifiedText import POSifiedText
 
 import checks
 
@@ -127,14 +128,13 @@ async def markov(ctx):
             return
     except:
         pass
-    comments = []
+    corpus = []
     for item in raw['data']['children']:
         try:
-            comments.append(str(item['data']['body']))
+            corpus.append(". ".join(re.split(r"\s*\n\s*", str(item['data']['body']))))
         except:
             pass
-    corpus = '\r\n'.join(comments)
-    text_model = markovify.NewlineText(corpus)
+    text_model = POSifiedText(corpus)
     reply = ''
     sentence = text_model.make_sentence(tries=100)
     if sentence:
