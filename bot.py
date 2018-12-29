@@ -1,56 +1,32 @@
-import sys
 import datetime
 import asyncio
 import traceback
 import json
-import re
 
 import discord
 from discord.ext import commands
 import requests
 import markovify
-import nltk
 
 import checks
 
+# Settings
 with open('settings.json') as settings_file:
     settings = json.load(settings_file)
 
 
-# Application info
+# Some variables
 username = settings["discord"]["description"]
 version = settings["discord"]["version"]
-print('{} - {}'.format(username, version))
 start_time = datetime.datetime.utcnow()
-
-
 bot = commands.Bot(
     command_prefix=settings["discord"]["command_prefix"],
-    description=settings["discord"]["description"]
-)
+    description=settings["discord"]["description"])
 
-# Remove default help command so we can customise
-#bot.remove_command('help')
+print('{} - {}'.format(username, version))
 
 
-@checks.admin_or_permissions(manage_server=True)
-@bot.command(pass_context=True, name="restart")
-async def bot_restart(ctx):
-    try:
-        print("Bot rebooted by {}".format(ctx.message.author.name))
-        await bot.send_message(ctx.message.channel,
-            '{} is restarting...'.format(username))
-        await asyncio.sleep(2)
-        await bot.logout()
-        await asyncio.sleep(3)
-        await bot.close()
-        sys.exit(0)
-    except Exception as e:
-        print('bot_restart : ', e)
-        pass
-        sys.exit(0)
-
-
+# Ping
 @checks.admin_or_permissions(manage_server=True)
 @bot.command(pass_context=True, name="ping")
 async def bot_ping(ctx):
@@ -63,6 +39,7 @@ async def bot_ping(ctx):
     await bot.edit_message(pong_message, "Pong! `{}ms`".format(int(millis)))
 
 
+# The following is trivial and self-explanatory
 @bot.event
 async def on_command_error(error, ctx):
     if isinstance(error, commands.errors.CommandNotFound):
@@ -101,10 +78,11 @@ async def on_command_error(error, ctx):
         print(''.join(tb))
 
 
+# Similar to above
 @bot.event
 async def on_error(event_method, *args, **kwargs):
     if isinstance(args[0], commands.errors.CommandNotFound):
-        # for some reason runs despite the above
+        # For some reason runs despite the above
         return
     print('Ignoring exception in {}'.format(event_method))
     mods_msg = "Exception occured in {}".format(event_method)
@@ -117,6 +95,7 @@ async def on_error(event_method, *args, **kwargs):
     print(kwargs)
 
 
+# Ready
 @bot.event
 async def on_ready():
     await asyncio.sleep(1)
@@ -132,6 +111,7 @@ async def on_ready():
     await asyncio.sleep(1)
 
 
+# Proof on concept, do not use in production
 @bot.command(pass_context=True, name='markov')
 async def markov(ctx):
     if ctx.message.author == bot.user:
@@ -165,4 +145,5 @@ async def markov(ctx):
     await asyncio.sleep(2)
 
 
+# Starts the bot
 bot.run(settings["discord"]["client_token"])
