@@ -1,7 +1,7 @@
 {
     "discord" : {
         "client_token" : "[bot token goes here]",
-        "version" : "[bot version goes here]"
+        "version" : "[bot version goes here]",
         "description" : "[bot name goes here",
         "command_prefix" : "[command prefix goes here]",
         "game" : "[game goes here]"
