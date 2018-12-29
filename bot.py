@@ -3,11 +3,13 @@ import datetime
 import asyncio
 import traceback
 import json
+import re
 
 import discord
 from discord.ext import commands
 import requests
 import markovify
+import nltk
 
 import checks
 
@@ -29,6 +31,7 @@ bot = commands.Bot(
 
 # Remove default help command so we can customise
 #bot.remove_command('help')
+
 
 @checks.admin_or_permissions(manage_server=True)
 @bot.command(pass_context=True, name="restart")
@@ -59,38 +62,6 @@ async def bot_ping(ctx):
     millis += delta.microseconds / 1000
     await bot.edit_message(pong_message, "Pong! `{}ms`".format(int(millis)))
 
-
-def get_bot_uptime(*, brief=False):
-    now = datetime.datetime.utcnow()
-    delta = now - start_time
-    hours, remainder = divmod(int(delta.total_seconds()), 3600)
-    minutes, seconds = divmod(remainder, 60)
-    days, hours = divmod(hours, 24)
-    if not brief:
-        if days:
-            fmt = '{d} days, {h} hours, {m} minutes, and {s} seconds'
-        else:
-            fmt = '{h} hours, {m} minutes, and {s} seconds'
-    else:
-        fmt = '{h}h {m}m {s}s'
-        if days:
-            fmt = '{d}d ' + fmt
-    return fmt.format(d=days, h=hours, m=minutes, s=seconds)
-
-
-@checks.admin_or_permissions(manage_server=True)
-@bot.command(pass_context=True, name="status")
-async def bot_status(ctx):
-    passed = get_bot_uptime()
-    lastStarted=start_time.strftime("%b %d, %Y at %I:%M:%S %p UTC")
-
-    lastStartedField = EmbedField(name="Last Started:", value=lastStarted, inline=False)
-    uptimeField = EmbedField(name="Uptime:", value=passed, inline=False)
-    versionField = EmbedField(name="Version:", value=version, inline=False)
-    fieldList = [lastStartedField, uptimeField, versionField]
-
-    embed = embedInformation(title="Bot Status", fieldList=fieldList)
-    await bot.say(embed=embed)
 
 @bot.event
 async def on_command_error(error, ctx):
@@ -165,12 +136,7 @@ async def on_ready():
 async def markov(ctx):
     if ctx.message.author == bot.user:
         return
-    argument = ctx.message.content.split(' ', 3)[1]
-    state_size = ''
-    try:
-        state_size = ctx.message.content.split(' ', 3)[2]
-    except:
-        pass
+    argument = ctx.message.content.split(' ', 2)[1]
     url = 'https://www.reddit.com/user/{0}/comments/.json?limit=100&sort=new'.format(argument)
     headers = {'User-agent': '{} - {}'.format(username, version)}
     r = requests.get(url, headers=headers)
@@ -187,20 +153,16 @@ async def markov(ctx):
             comments.append(str(item['data']['body']))
         except:
             pass
-    corpus = '\n\n'.join(comments)
-    text_model = markovify.Text(corpus)
+    corpus = '\r\n'.join(comments)
+    text_model = markovify.NewlineText(corpus)
     reply = ''
-    if state_size:
-        sentence = text_model.make_sentence(tries=100, max_overlap_ratio=0.6, state_size=int(state_size))
-    else:
-        sentence = text_model.make_sentence(tries=100, max_overlap_ratio=0.6)
+    sentence = text_model.make_sentence(tries=100)
     if sentence:
         reply = '{0.author.mention} {1}'.format(ctx.message, sentence)
         await bot.say(reply)
     else:
         await bot.say('{0.author.mention} {1}'.format(ctx.message, 'Unable to build text chain.'))
     await asyncio.sleep(2)
-
 
 
 bot.run(settings["discord"]["client_token"])
